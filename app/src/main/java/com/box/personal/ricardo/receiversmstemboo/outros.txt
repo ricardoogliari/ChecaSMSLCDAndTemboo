@@ -1,0 +1,145 @@
+//código arduino
+#include <Wire.h>
+#include "rgb_lcd.h"
+
+rgb_lcd lcd;
+
+const int TouchPin=4;
+int controle = 0;
+void setup()
+{
+  pinMode(TouchPin, INPUT);
+  lcd.begin(16, 2);
+}
+
+void loop()
+{
+  if (controle == 0){
+    controle = 1;
+    lcd.setRGB(255, 0, 0);
+    lcd.setCursor(0, 0);
+    lcd.print("cuidade");
+    lcd.setCursor(0, 1);
+    lcd.print("bio na linha");
+
+  } else {
+    controle = 0;
+    lcd.setRGB(0, 255, 0);
+    lcd.setCursor(0, 0);
+    lcd.print("tranquilo");
+    lcd.setCursor(0, 1);
+    lcd.print("sossegado");
+  }
+
+  delay(2000);
+}
+
+
+//servidor socket
+package smstoarduinoandface;
+
+import gnu.io.CommPortIdentifier;
+import gnu.io.SerialPort;
+import java.awt.Robot;
+import java.awt.event.KeyEvent;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Enumeration;
+
+/**
+ *
+ * @author ricardo
+ */
+public class SMSToArduinoAndFace {
+
+    private static final String PORT_NAMES[] = {"COM5"};
+
+    private BufferedReader input;
+    private OutputStream output;
+    private static final int TIME_OUT = 2000;
+    private static final int DATA_RATE = 9600;
+
+    public static void main(String[] args) {
+        OutputStreamWriter output;
+        BufferedWriter writer;
+
+        BufferedReader leitorLinhas;
+        InputStreamReader leitorCaracteres;
+        InputStream leitorSocket;
+
+        final SMSToArduinoAndFace sms = new SMSToArduinoAndFace();
+        sms.init();
+
+        try {
+            ServerSocket server = new ServerSocket(8080);
+            System.out.println(server.getInetAddress());
+
+            while (true) {
+                Socket s = server.accept();
+                System.out.println(server.getInetAddress());
+                leitorSocket = s.getInputStream();
+                leitorCaracteres = new InputStreamReader(leitorSocket);
+                leitorLinhas = new BufferedReader(leitorCaracteres);
+                String recebeu = leitorLinhas.readLine();
+
+                System.out.println(recebeu);
+
+                sms.enviar(recebeu);
+            }
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+        }
+    }
+
+    public void init(){
+        CommPortIdentifier portId = null;
+        Enumeration portEnum = CommPortIdentifier.getPortIdentifiers();
+
+        while (portEnum.hasMoreElements()) {
+            CommPortIdentifier currPortId = (CommPortIdentifier) portEnum.nextElement();
+            for (String portName : PORT_NAMES) {
+                if (currPortId.getName().equals(portName)) {
+                    portId = currPortId;
+                    break;
+                }
+            }
+        }
+        if (portId == null) {
+            System.out.println("Could not find COM port.");
+            return;
+        }
+
+        try {
+            SerialPort serialPort = (SerialPort) portId.open(this.getClass().getName(),
+                    TIME_OUT);
+
+            serialPort.setSerialPortParams(DATA_RATE,
+                    SerialPort.DATABITS_8,
+                    SerialPort.STOPBITS_1,
+                    SerialPort.PARITY_NONE);
+
+            input = new BufferedReader(
+                    new InputStreamReader(
+                            serialPort.getInputStream()));
+
+            output = serialPort.getOutputStream();
+        } catch (Exception e) {
+            System.err.println(e.toString());
+        }
+    }
+
+    public void enviar(String recebeu)  {
+        try {
+            output.write(recebeu.getBytes());
+        } catch (IOException e){
+
+        }
+    }
+}
